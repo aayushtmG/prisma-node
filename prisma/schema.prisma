@@ -1,0 +1,108 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["omitApi"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id       String           @id @default(uuid())
+  name     String
+  email    String           @unique
+  mobile   String           @unique
+  password String
+  tasks    TaskAssignment[] // Tasks assigned to this user
+  subtasks Subtask[]
+  comments Comment[]
+  projects ProjectMember[]
+
+  @@map("users")
+}
+
+model Project {
+  id           String          @id @default(uuid())
+  name         String
+  tasks        Task[]
+  team_members ProjectMember[]
+
+  @@map("projects")
+}
+
+model Task {
+  id             String           @id @default(uuid())
+  title          String
+  starting_date  DateTime         @default(now())
+  ending_date    DateTime
+  file           String?
+  project        Project?         @relation(fields: [project_id], references: [id], onDelete: Cascade)
+  project_id     String?
+  project_name   String
+  team           Team
+  subtasks       Subtask[]
+  comments       Comment[]
+  createdAt      DateTime         @default(now())
+  assigned_users TaskAssignment[]
+  status         TaskStatus       @default(PENDING)
+
+  @@map("tasks")
+}
+
+model TaskAssignment {
+  taskId String
+  userId String
+  task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@id([taskId, userId])
+}
+
+model ProjectMember {
+  projectId String
+  userId    String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user      User    @relation(fields: [userId], references: [id])
+
+  @@id([projectId, userId])
+}
+
+model Subtask {
+  id     String  @id @default(uuid())
+  title  String
+  task   Task    @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  taskId String
+  User   User?   @relation(fields: [userId], references: [id])
+  userId String?
+
+  @@map("subtasks")
+}
+
+model Comment {
+  id      String @id @default(uuid())
+  content String
+  task    Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  taskId  String
+  user    User   @relation(fields: [userId], references: [id])
+  userId  String
+
+  @@map("comments")
+}
+
+enum Team {
+  DEVELOPMENT
+  DESIGN
+  MARKETING
+}
+
+enum TaskStatus {
+  PENDING
+  COMPLETED
+}
